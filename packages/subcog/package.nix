@@ -21,6 +21,8 @@ rustPlatform.buildRustPackage rec {
 
   cargoHash = "sha256-3nxXZ1jQzZH6Tm4VL0N64nN/G7wuZsJHeqbEk4KIDm4=";
 
+  buildFeatures = [ "http" ];
+
   # perl is needed by vendored OpenSSL (via git2 crate) build
   nativeBuildInputs = [ perl ];
 
