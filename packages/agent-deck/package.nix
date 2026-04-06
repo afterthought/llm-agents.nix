@@ -10,16 +10,16 @@
 
 buildGoModule rec {
   pname = "agent-deck";
-  version = "0.27.5";
+  version = "1.3.1";
 
   src = fetchFromGitHub {
     owner = "asheshgoplani";
     repo = "agent-deck";
     rev = "v${version}";
-    hash = "sha256-aNjvBdxwWeRhHOrxHNXl5lBfihNRmZy1j6WEG1kgKiU=";
+    hash = "sha256-h+hesx6rNLmxmUFyqJEbgFFKFltNwePbRb+awfFqVDw=";
   };
 
-  vendorHash = "sha256-PrhxSMJm4TPRtNHkg36HQJE4a0UDfYUpQdYA0tUor9k=";
+  vendorHash = "sha256-qKK9Wu5+0bi+x6/OwRueIvPi6f4hFUqG+RkhWnLOr5Q=";
 
   subPackages = [ "cmd/agent-deck" ];
 
@@ -40,9 +40,8 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
-    "-X=main.version=${version}"
-    "-X=main.commit=v${version}"
-    "-X=main.date=1970-01-01T00:00:00Z"
+    "-X=main.Version=${version}"
+    "-X=github.com/asheshgoplani/agent-deck/internal/ui.Version=${version}"
   ];
 
   passthru.category = "Workflow & Project Management";
