@@ -23,19 +23,36 @@
   rust,
   rustPlatform,
   turbo,
+  turbo-unwrapped,
+  kdePackages,
   webkitgtk_4_1,
   wrapGAppsHook4,
 }:
+let
+  # Workaround until https://github.com/NixOS/nixpkgs/pull/518987 lands:
+  # ECM is pure CMake macros but defaults to linux/freebsd-only via
+  # mkKdeDerivation, breaking turbo-unwrapped eval on Darwin.
+  ecm = kdePackages.extra-cmake-modules.overrideAttrs (old: {
+    meta = old.meta // {
+      platforms = lib.platforms.all;
+    };
+  });
+  turbo' = turbo.override {
+    turbo-unwrapped = turbo-unwrapped.override {
+      extra-cmake-modules = ecm;
+    };
+  };
+in
 
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "gitbutler";
-  version = "0.19.9";
+  version = "0.19.10";
 
   src = fetchFromGitHub {
     owner = "gitbutlerapp";
     repo = "gitbutler";
     tag = "release/${finalAttrs.version}";
-    hash = "sha256-hUxtvCxLB++33gKc+UNOAns3UFozWTETYJvEr+HcOgU=";
+    hash = "sha256-s4ZLwWWkfreNX6pDIz3LoSBTCLV5hOyHujw4DVpI08k=";
   };
 
   # Pin the user-facing version into the Tauri release config and disable the
@@ -46,19 +63,19 @@ rustPlatform.buildRustPackage (finalAttrs: {
     jq '.
         | (.version = "${finalAttrs.version}")
         | (.bundle.createUpdaterArtifacts = false)
-        | (.bundle.externalBin = ["gitbutler-git-setsid", "gitbutler-git-askpass"])
+        | (.bundle.externalBin = ["gitbutler-git-askpass"])
       ' "$tauriConfRelease" | sponge "$tauriConfRelease"
 
     substituteInPlace apps/desktop/src/lib/backend/tauri.ts \
       --replace-fail 'checkUpdate = tauriCheck;' 'checkUpdate = () => null;'
   '';
 
-  cargoHash = "sha256-7dF865YPcVp/g6PUs5QRaU3wZ0UmlAgaPGhHsIjIZPY=";
+  cargoHash = "sha256-SRo8Eiv6fZVF5Y8vghNUBdnPvKK/IkirJRqvj26iTko=";
 
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
     fetcherVersion = 2;
-    hash = "sha256-BJcvcMHKHpm5HJZlZaqGz/5xYT1eNOMcg5MI2kOmebM=";
+    hash = "sha256-/jIt0adSoKfL+4p/Y2oZTa41bHliG1wZr8sUGan9D2w=";
   };
 
   nativeBuildInputs = [
@@ -73,7 +90,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
     pkg-config
     pnpm
     pnpmConfigHook
-    turbo
+    turbo'
     wrapGAppsHook4
   ]
   ++ lib.optional stdenv.hostPlatform.isDarwin makeBinaryWrapper;
@@ -108,7 +125,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
     # Task tracing requires Tokio built with this cfg.
     RUSTFLAGS = "--cfg tokio_unstable";
 
-    TUBRO_BINARY_PATH = lib.getExe turbo;
+    TUBRO_BINARY_PATH = lib.getExe turbo';
     TURBO_TELEMETRY_DISABLED = 1;
 
     OPENSSL_NO_VENDOR = true;
@@ -121,7 +138,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
     substituteInPlace node_modules/.pnpm/sass-embedded@*/node_modules/sass-embedded/dist/lib/src/compiler-path.js \
       --replace-fail 'compilerCommand = (() => {' 'compilerCommand = (() => { return ["${lib.getExe dart-sass}"];'
 
-    turbo run --filter @gitbutler/svelte-comment-injector build
+    ${lib.getExe turbo'} run --filter @gitbutler/svelte-comment-injector build
     pnpm build:desktop -- --mode production
   '';
 
